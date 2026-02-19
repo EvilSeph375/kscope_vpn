@@ -28,9 +28,21 @@ def handle_client(conn, addr, args):
 
         ver, obfs, epoch_window, c_rnd, token, c_eph_pub, c_sig = unpack_hello(payload)
 
-        expected = hmac_sha256(psk, c_rnd + struct.pack("!I", epoch_window))[:16]
-        if token != expected:
-            return silent_fail(conn)
+        # token verify with time-drift tolerance (+/- 1 window)
+ok = False
+for w in (epoch_window - 1, epoch_window, epoch_window + 1):
+    expected = hmac_sha256(psk, c_rnd + struct.pack("!I", w))[:16]
+    if token == expected:
+        ok = True
+        epoch_window = w  # normalize to accepted window
+        break
+
+if not ok:
+    # В проде — тихий дроп. Для отладки можно печатать причину:
+    if getattr(args, "debug", False):
+        print(f"[server] token mismatch from {addr}")
+    return silent_fail(conn)
+
 
         client_pub = load_ed25519_public(args.client_pub)
         verify_ed25519(client_pub,
@@ -71,6 +83,8 @@ def main():
     parser.add_argument("--server-priv", default="keys/server_ed25519_priv.pem")
     parser.add_argument("--client-pub", default="keys/client_ed25519_pub.pem")
     parser.add_argument("--policy", default="policy.json")
+    parser.add_argument("--debug", action="store_true")
+ 
     args = parser.parse_args()
 
     s = socket.socket()

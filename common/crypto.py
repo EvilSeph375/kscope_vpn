@@ -101,10 +101,17 @@ def frame_decrypt(keys: SessionKeys, frame: bytes) -> bytes:
     return aead.decrypt(nonce, ct, None)
 
 
+def _recv_exact(sock, n: int) -> bytes:
+    buf = bytearray()
+    while len(buf) < n:
+        chunk = sock.recv(n - len(buf))
+        if not chunk:
+            raise ConnectionError("closed")
+        buf.extend(chunk)
+    return bytes(buf)
+
 def recv_encrypted_frame(sock):
-    header = sock.recv(4)
-    if not header:
-        raise ConnectionError("closed")
+    header = _recv_exact(sock, 4)
     (length,) = struct.unpack("!I", header)
-    body = sock.recv(12 + length)
+    body = _recv_exact(sock, 12 + length)
     return header + body
