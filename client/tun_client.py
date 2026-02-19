@@ -1,6 +1,10 @@
 import socket
 import argparse
 import os
+import base64
+import time
+import struct
+import threading
 
 from common.protocol import *
 from common.crypto import *
@@ -31,22 +35,42 @@ def main():
     c_eph_priv, c_eph_pub = x25519_keypair()
     client_priv = load_ed25519_private(args.client_priv)
 
-    c_sig = sign_ed25519(client_priv,
-                         hello_to_sign(VERSION, OBFS_NONE, epoch_window,
-                                       c_rnd, token, c_eph_pub))
+    c_sig = sign_ed25519(
+        client_priv,
+        hello_to_sign(
+            VERSION,
+            OBFS_NONE,
+            epoch_window,
+            c_rnd,
+            token,
+            c_eph_pub,
+        ),
+    )
 
-    send_msg(sock, MSG_CLIENT_HELLO,
-             pack_hello(VERSION, OBFS_NONE, epoch_window,
-                        c_rnd, token, c_eph_pub, c_sig))
+    send_msg(
+        sock,
+        MSG_CLIENT_HELLO,
+        pack_hello(
+            VERSION,
+            OBFS_NONE,
+            epoch_window,
+            c_rnd,
+            token,
+            c_eph_pub,
+            c_sig,
+        ),
+    )
 
     mtype, payload = recv_msg(sock)
+
     ver, obfs, epoch_window, s_rnd, token, s_eph_pub, s_sig = unpack_hello(payload)
 
     server_pub = load_ed25519_public(args.server_pub)
-    verify_ed25519(server_pub,
-                   hello_to_sign(ver, obfs, epoch_window,
-                                 s_rnd, token, s_eph_pub),
-                   s_sig)
+    verify_ed25519(
+        server_pub,
+        hello_to_sign(ver, obfs, epoch_window, s_rnd, token, s_eph_pub),
+        s_sig,
+    )
 
     shared = x25519_shared(c_eph_priv, s_eph_pub)
     keys = derive_session(shared, c_rnd, s_rnd)
@@ -54,6 +78,7 @@ def main():
     print("Tunnel established")
 
     tun = create_tun("ks0")
+
     os.system("ip addr add 10.10.0.2/24 dev ks0")
     os.system("ip link set ks0 up")
 
@@ -62,7 +87,6 @@ def main():
             packet = os.read(tun, 2000)
             sock.sendall(frame_encrypt(keys, packet))
 
-    import threading
     threading.Thread(target=tun_to_sock, daemon=True).start()
 
     while True:
