@@ -1,0 +1,15 @@
+{
+  "psk_b64": "REPLACE_WITH_BASE64_32_BYTES",
+  "epoch_seconds": 60,
+  "obfs_profiles": [
+    { "id": "none", "mode": 0 }
+  ],
+  "transports": [
+    { "id": "tcp", "port": 8443 }
+  ],
+  "rekey": { "bytes": 1073741824, "seconds": 3600 },
+  "padding": { "max_pad": 512, "jitter_ms": 25 },
+  "endpoints": [
+    { "host": "192.168.38.127", "port": 8443, "transport": "tcp", "profile": "none" }
+  ]
+}
