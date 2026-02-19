@@ -1,5 +1,5 @@
 {
-  "psk_b64": "REPLACE_WITH_BASE64_32_BYTES",
+  "psk_b64": "a3K1W545eaS1yqq4/xUtpaDS5K406pk9yibBAdeblv8=",
   "epoch_seconds": 60,
   "obfs_profiles": [
     { "id": "none", "mode": 0 }
